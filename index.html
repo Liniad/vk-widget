@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Виджет активности — настройка</title>
+  <style>
+    :root {
+      --bg: #12151b;
+      --panel: #1a1e26;
+      --panel-2: #222733;
+      --field: #12161d;
+      --border: #2d333f;
+      --fg: #e8ebf2;
+      --muted: #9aa3b2;
+      --accent: #4f7cff;
+      --accent-2: #3b63d8;
+      --green: #3fb37f;
+      --red: #e26868;
+      --amber: #d9a441;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font: 15px/1.5 "Segoe UI", system-ui, -apple-system, sans-serif;
+    }
+    .page { max-width: 880px; margin: 0 auto; padding: 28px 18px 56px; }
+    h1 { margin: 0 0 6px; font-size: 26px; font-weight: 650; }
+    .lead { color: var(--muted); margin: 0 0 22px; }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 14px;
+    }
+    .card h2 {
+      margin: 0 0 4px;
+      font-size: 13px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 650;
+    }
+    .card p { margin: 6px 0 12px; color: var(--muted); }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 620px) { .grid { grid-template-columns: 1fr; } }
+    label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 5px; }
+    input {
+      width: 100%;
+      background: var(--field);
+      color: var(--fg);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 10px 12px;
+      font: inherit;
+      outline: none;
+    }
+    input:focus { border-color: var(--accent); }
+    textarea {
+      width: 100%;
+      min-height: 86px;
+      resize: vertical;
+      background: var(--field);
+      color: var(--fg);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 10px 12px;
+      font: 12px/1.45 Consolas, "SFMono-Regular", monospace;
+      word-break: break-all;
+    }
+    .btn {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: var(--fg);
+      border-radius: 10px;
+      padding: 11px 16px;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s, border-color .15s, opacity .15s;
+    }
+    .btn:hover:not(:disabled) { background: #2a303d; border-color: #3b4352; }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn.primary { background: var(--accent); border-color: var(--accent); }
+    .btn.primary:hover:not(:disabled) { background: var(--accent-2); }
+    .btn.green { background: var(--green); border-color: var(--green); }
+    .btn.small { padding: 8px 12px; font-size: 13px; font-weight: 500; }
+    .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .step {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 4px 0 14px;
+      border-bottom: 1px dashed var(--border);
+      margin-bottom: 14px;
+    }
+    .step:last-of-type { border-bottom: 0; margin-bottom: 8px; }
+    .num {
+      flex: 0 0 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .step.done .num { background: var(--green); border-color: var(--green); color: #fff; }
+    .step h3 { margin: 3px 0 4px; font-size: 15px; }
+    .step .body { flex: 1; min-width: 0; }
+    .hint { color: var(--muted); font-size: 13px; margin: 4px 0 10px; }
+    .note {
+      border-left: 3px solid var(--amber);
+      background: rgba(217, 164, 65, .08);
+      padding: 9px 12px;
+      border-radius: 0 8px 8px 0;
+      color: #e8d6ae;
+      font-size: 13px;
+      margin: 10px 0;
+    }
+    .danger { color: #ffb3b3; }
+    #log {
+      min-height: 70px;
+      max-height: 220px;
+      overflow: auto;
+      background: var(--field);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font: 12px/1.5 Consolas, "SFMono-Regular", monospace;
+      color: var(--muted);
+      white-space: pre-wrap;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 12px;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+    .badge.ok { color: #9fe7c4; border-color: rgba(63, 179, 127, .5); }
+    .badge.err { color: #ffb3b3; border-color: rgba(226, 104, 104, .5); }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+<div class="page">
+  <h1>Виджет активности</h1>
+  <p class="lead">
+    Мини-приложение для установки собственного виджета сообщества и получения
+    ключа с правом <b>app_widget</b>. Ключ никуда не отправляется: он
+    показывается только вам, чтобы вставить его в desktop-приложение.
+  </p>
+
+  <div class="card">
+    <h2>Подключение</h2>
+    <div class="grid">
+      <div>
+        <label for="appId">ID мини-приложения (app_id)</label>
+        <input id="appId" inputmode="numeric" placeholder="например, 12345678">
+      </div>
+      <div>
+        <label for="groupId">ID сообщества</label>
+        <input id="groupId" inputmode="numeric" placeholder="например, 197207317">
+      </div>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn small" id="saveIds">Сохранить ID</button>
+      <span class="hint" style="margin:0">ID хранятся только в этом браузере.</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Шаги</h2>
+
+    <div class="step" id="step-add">
+      <div class="num">1</div>
+      <div class="body">
+        <h3>Добавить приложение в сообщество <span class="badge" id="badge-add">не выполнено</span></h3>
+        <p class="hint">
+          Нужны права администратора сообщества. В настройках Mini App должен быть
+          включён «Запуск приложения из сообщества».
+        </p>
+        <button class="btn" id="addBtn">Добавить в сообщество</button>
+      </div>
+    </div>
+
+    <div class="step" id="step-install">
+      <div class="num">2</div>
+      <div class="body">
+        <h3>Установить виджет <span class="badge" id="badge-install">не выполнено</span></h3>
+        <p class="hint">
+          Откроется предпросмотр таблицы. Установите виджет — дальше desktop-приложение
+          будет обновлять его настоящими данными.
+        </p>
+        <button class="btn" id="installBtn">Установить виджет</button>
+      </div>
+    </div>
+
+    <div class="step" id="step-token">
+      <div class="num">3</div>
+      <div class="body">
+        <h3>Получить ключ сообщества <span class="badge" id="badge-token">не выполнено</span></h3>
+        <p class="hint">
+          Право <b>app_widget</b>. Ключ может получить только администратор.
+          Вставьте его в desktop-приложении: вкладка «Виджет» → «Ключ сообщества».
+        </p>
+        <button class="btn green" id="tokenBtn">Получить ключ</button>
+        <div id="tokenBox" class="hidden" style="margin-top:12px">
+          <label for="token">Ключ сообщества (не пересылайте его никому)</label>
+          <textarea id="token" readonly spellcheck="false"></textarea>
+          <div class="row" style="margin-top:10px">
+            <button class="btn small" id="copyBtn">Скопировать</button>
+            <button class="btn small" id="hideBtn">Скрыть</button>
+          </div>
+          <div class="note danger">
+            Это секрет. Не публикуйте его, не отправляйте в чат и не сохраняйте
+            в репозитории. Desktop-приложение хранит ключ только в локальном
+            конфиге.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Журнал</h2>
+    <div id="log">Готово к работе. Откройте это приложение внутри VK.</div>
+  </div>
+</div>
+
+<script src="vk-bridge.min.js"></script>
+<script>
+  // Локальная копия vk-bridge (MIT, версия 3.0.2). Если файл не загрузили
+  // в репозиторий — берём ту же версию с CDN.
+  if (!window.vkBridge) {
+    document.write(
+      '<script src="https://unpkg.com/@vkontakte/vk-bridge@3.0.2/dist/browser.min.js"><\/script>'
+    );
+  }
+</script>
+<script>
+(function () {
+  "use strict";
+
+  const bridge = window.vkBridge || null;
+  const $ = (id) => document.getElementById(id);
+  const logBox = $("log");
+  const appInput = $("appId");
+  const groupInput = $("groupId");
+  const tokenBox = $("tokenBox");
+  const tokenArea = $("token");
+
+  const SAMPLE_WIDGET = {
+    title: "Активность сообщества",
+    title_counter: 0,
+    head: [
+      { text: "Участник", align: "left" },
+      { text: "Место", align: "center" },
+      { text: "Лайки", align: "right" },
+      { text: "Комментарии", align: "right" },
+      { text: "Баллы", align: "right" }
+    ],
+    body: [[
+      { text: "Пока нет данных" },
+      { text: "—" },
+      { text: "—" },
+      { text: "—" },
+      { text: "—" }
+    ]]
+  };
+
+  function widgetCode(object) {
+    return "return " + JSON.stringify(object) + ";";
+  }
+
+  function log(message, kind) {
+    const time = new Date().toLocaleTimeString("ru-RU");
+    const prefix = kind === "error" ? "[ошибка] " : "";
+    logBox.textContent += "\n" + time + "  " + prefix + message;
+    logBox.scrollTop = logBox.scrollHeight;
+  }
+
+  function storeGet(key) {
+    try { return localStorage.getItem(key) || ""; } catch (e) { return ""; }
+  }
+
+  function storeSet(key, value) {
+    try { localStorage.setItem(key, String(value)); } catch (e) { /* без хранилища */ }
+  }
+
+  function setBadge(id, text, kind) {
+    const badge = $(id);
+    badge.textContent = text;
+    badge.className = "badge" + (kind ? " " + kind : "");
+  }
+
+  function readIds() {
+    const appId = parseInt(appInput.value, 10) || 0;
+    const groupId = parseInt(groupInput.value, 10) || 0;
+    return { appId, groupId };
+  }
+
+  function saveIds() {
+    const { appId, groupId } = readIds();
+    if (appId > 0) storeSet("vk_widget_app_id", appId);
+    if (groupId > 0) storeSet("vk_widget_group_id", groupId);
+    log("ID сохранены: app_id=" + (appId || "—") + ", group_id=" + (groupId || "—"));
+  }
+
+  function requireBridge() {
+    if (!bridge) {
+      log("VK Bridge не найден. Откройте страницу внутри VK как Mini App.", "error");
+      return false;
+    }
+    return true;
+  }
+
+  function requireIds() {
+    const ids = readIds();
+    if (!ids.appId || !ids.groupId) {
+      log("Сначала укажите app_id и group_id.", "error");
+      return null;
+    }
+    return ids;
+  }
+
+  function start() {
+    const params = new URLSearchParams(window.location.search);
+    const urlApp = parseInt(params.get("vk_app_id") || "0", 10) || 0;
+    const urlGroup = parseInt(params.get("vk_group_id") || "0", 10) || 0;
+    const storedApp = parseInt(storeGet("vk_widget_app_id") || "0", 10) || 0;
+    const storedGroup = parseInt(storeGet("vk_widget_group_id") || "0", 10) || 0;
+
+    if (urlApp || storedApp) appInput.value = String(urlApp || storedApp);
+    if (urlGroup || storedGroup) groupInput.value = String(urlGroup || storedGroup);
+
+    if (!bridge) {
+      log("VK Bridge не найден. Откройте страницу внутри VK как Mini App.", "error");
+      return;
+    }
+
+    bridge.send("VKWebAppInit").catch(function () {});
+
+    bridge.send("VKWebAppGetLaunchParams").then(function (data) {
+      if (data && data.vk_app_id && !appInput.value) appInput.value = String(data.vk_app_id);
+      if (data && data.vk_group_id && !groupInput.value) groupInput.value = String(data.vk_group_id);
+      if (appInput.value) storeSet("vk_widget_app_id", appInput.value);
+      if (groupInput.value) storeSet("vk_widget_group_id", groupInput.value);
+      log("Приложение открыто внутри VK.");
+    }).catch(function () {
+      log("Не удалось получить параметры запуска — заполните ID вручную.");
+    });
+  }
+
+  $("saveIds").addEventListener("click", saveIds);
+
+  $("addBtn").addEventListener("click", function () {
+    if (!requireBridge()) return;
+    const ids = requireIds();
+    if (!ids) return;
+    log("Открываю выбор сообщества...");
+    bridge.send("VKWebAppAddToCommunity", { hide_success_modal: false })
+      .then(function (data) {
+        if (data && data.group_id) {
+          groupInput.value = String(data.group_id);
+          storeSet("vk_widget_group_id", data.group_id);
+          setBadge("badge-add", "готово", "ok");
+          $("step-add").classList.add("done");
+          log("Приложение добавлено в сообщество " + data.group_id + ".");
+        } else {
+          log("Приложение добавлено, но ID сообщества не пришёл.");
+        }
+      })
+      .catch(function (error) {
+        log("Не удалось добавить: " + (error && error.error_msg ? error.error_msg : error), "error");
+      });
+  });
+
+  $("installBtn").addEventListener("click", function () {
+    if (!requireBridge()) return;
+    const ids = requireIds();
+    if (!ids) return;
+    log("Открываю предпросмотр виджета...");
+    bridge.send("VKWebAppShowCommunityWidgetPreviewBox", {
+      group_id: ids.groupId,
+      type: "table",
+      code: widgetCode(SAMPLE_WIDGET)
+    })
+      .then(function (data) {
+        if (data && data.result) {
+          setBadge("badge-install", "готово", "ok");
+          $("step-install").classList.add("done");
+          log("Экран установки показан. Подтвердите установку виджета в VK.");
+        } else {
+          log("VK не подтвердил показ экрана установки.");
+        }
+      })
+      .catch(function (error) {
+        log("Не удалось установить: " + (error && error.error_msg ? error.error_msg : error), "error");
+      });
+  });
+
+  $("tokenBtn").addEventListener("click", function () {
+    if (!requireBridge()) return;
+    const ids = requireIds();
+    if (!ids) return;
+    log("Запрашиваю ключ сообщества с правом app_widget...");
+    bridge.send("VKWebAppGetCommunityToken", {
+      app_id: ids.appId,
+      group_id: ids.groupId,
+      scope: "app_widget"
+    })
+      .then(function (data) {
+        if (data && data.access_token) {
+          tokenArea.value = data.access_token;
+          tokenBox.classList.remove("hidden");
+          setBadge("badge-token", "готово", "ok");
+          $("step-token").classList.add("done");
+          log("Ключ получен. Скопируйте его в desktop-приложение.");
+        } else {
+          log("VK не вернул ключ.", "error");
+        }
+      })
+      .catch(function (error) {
+        log("Не удалось получить ключ: " + (error && error.error_msg ? error.error_msg : error), "error");
+      });
+  });
+
+  $("copyBtn").addEventListener("click", function () {
+    const value = tokenArea.value;
+    if (!value) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(value).then(function () {
+        log("Ключ скопирован в буфер обмена.");
+      }).catch(function () {
+        tokenArea.select();
+        document.execCommand("copy");
+        log("Ключ скопирован.");
+      });
+    } else {
+      tokenArea.select();
+      document.execCommand("copy");
+      log("Ключ скопирован.");
+    }
+  });
+
+  $("hideBtn").addEventListener("click", function () {
+    tokenArea.value = "";
+    tokenBox.classList.add("hidden");
+    log("Ключ скрыт из страницы.");
+  });
+
+  start();
+})();
+</script>
+</body>
+</html>
