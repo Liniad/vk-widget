@@ -157,8 +157,11 @@
   <h1>Виджет активности</h1>
   <p class="lead">
     Мини-приложение для установки собственного виджета сообщества и получения
-    ключа с правом <b>app_widget</b>. Ключ никуда не отправляется: он
-    показывается только вам, чтобы вставить его в desktop-приложение.
+    двух ключей: <b>ключа сообщества</b> с правом <code>app_widget</code> (им
+    приложение обновляет виджет) и <b>пользовательского токена</b> (им читаются
+    лайки и комментарии участников, загружаются фото). Оба ключа никуда не
+    отправляются: они показываются только вам, чтобы вставить их в
+    desktop-приложение.
   </p>
 
   <div class="card">
@@ -230,11 +233,40 @@
         </div>
       </div>
     </div>
+    <div class="step" id="step-user">
+      <div class="num">4</div>
+      <div class="body">
+        <h3>Получить пользовательский токен <span class="badge" id="badge-user">не выполнено</span></h3>
+        <p class="hint">
+          Права <b>wall, photos, groups</b>. Нужен приложению, чтобы читать лайки
+          и комментарии участников и загружать фото в сообщество. Вставьте его в
+          desktop-приложении: «Настройки» → «Пользовательский токен (wall,
+          photos, offline)».
+        </p>
+        <div class="row">
+          <button class="btn green" id="userTokenBtn">Получить токен</button>
+          <button class="btn small" id="userTokenOauthBtn">Запасной способ (окно VK)</button>
+        </div>
+        <div id="userTokenBox" class="hidden" style="margin-top:12px">
+          <label for="userToken">Пользовательский токен (не пересылайте его никому)</label>
+          <textarea id="userToken" readonly spellcheck="false"></textarea>
+          <div class="row" style="margin-top:10px">
+            <button class="btn small" id="userCopyBtn">Скопировать</button>
+            <button class="btn small" id="userHideBtn">Скрыть</button>
+          </div>
+          <div class="note danger">
+            Это секрет вашей личной страницы VK. Не отправляйте его в чат и не
+            публикуйте. Desktop-приложение хранит токен только в локальном
+            конфиге. Если VK однажды скажет <code>access_token has expired</code> —
+            вернитесь на эту страницу и получите новый.
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="card">
-    <h2>Журнал</h2>
-    <div id="log">Готово к работе. Откройте это приложение внутри VK.</div>
+    <h2>Журнал</h2>    <div id="log">Готово к работе. Откройте это приложение внутри VK.</div>
   </div>
 </div>
 
@@ -259,6 +291,9 @@
   const groupInput = $("groupId");
   const tokenBox = $("tokenBox");
   const tokenArea = $("token");
+  const userTokenBox = $("userTokenBox");
+  const userTokenArea = $("userToken");
+  const USER_SCOPE = "wall,photos,groups";
 
   const SAMPLE_WIDGET = {
     title: "Активность сообщества",
@@ -266,13 +301,11 @@
     head: [
       { text: "Участник", align: "left" },
       { text: "Место", align: "center" },
-      { text: "Лайки", align: "right" },
-      { text: "Комментарии", align: "right" },
-      { text: "Баллы", align: "right" }
+      { text: "Лайки", align: "center" },
+      { text: "Баллы", align: "center" }
     ],
     body: [[
       { text: "Пока нет данных" },
-      { text: "—" },
       { text: "—" },
       { text: "—" },
       { text: "—" }
@@ -325,6 +358,61 @@
     return true;
   }
 
+  function errText(error) {
+    return error && error.error_msg ? error.error_msg : String(error);
+  }
+
+  function copyFrom(area, message) {
+    const value = area.value;
+    if (!value) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(value).then(function () {
+        log(message);
+      }).catch(function () {
+        area.select();
+        document.execCommand("copy");
+        log(message);
+      });
+    } else {
+      area.select();
+      document.execCommand("copy");
+      log(message);
+    }
+  }
+
+  function showUserToken(data, source) {
+    if (!data || !data.access_token) {
+      log("VK не вернул токен.", "error");
+      return;
+    }
+    userTokenArea.value = data.access_token;
+    userTokenBox.classList.remove("hidden");
+    setBadge("badge-user", "готово", "ok");
+    $("step-user").classList.add("done");
+    log(
+      "Токен получен (" + (source || "VK Bridge") + "), длина " +
+      data.access_token.length + ". Скопируйте его в «Настройки» desktop-приложения."
+    );
+  }
+
+  // Запасной способ: обычное окно VK вернёт токен прямо в адресе страницы.
+  function readTokenFromHash() {
+    const hash = window.location.hash || "";
+    if (!hash) return;
+    if (hash.indexOf("access_token") === -1 && hash.indexOf("error") === -1) return;
+    const params = new URLSearchParams(hash.replace(/^#/, ""));
+    const token = params.get("access_token") || "";
+    const error = params.get("error_description") || params.get("error") || "";
+    if (token) {
+      showUserToken({ access_token: token }, "окно VK");
+    } else if (error) {
+      log("VK вернул ошибку: " + error + " — используйте кнопку «Получить токен».", "error");
+    }
+    try {
+      history.replaceState(null, "", window.location.pathname + window.location.search);
+    } catch (e) { /* старый браузер — ничего страшного */ }
+  }
+
   function requireIds() {
     const ids = readIds();
     if (!ids.appId || !ids.groupId) {
@@ -350,6 +438,8 @@
     }
 
     bridge.send("VKWebAppInit").catch(function () {});
+
+    readTokenFromHash();
 
     bridge.send("VKWebAppGetLaunchParams").then(function (data) {
       if (data && data.vk_app_id && !appInput.value) appInput.value = String(data.vk_app_id);
@@ -436,22 +526,72 @@
       });
   });
 
-  $("copyBtn").addEventListener("click", function () {
-    const value = tokenArea.value;
-    if (!value) return;
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(value).then(function () {
-        log("Ключ скопирован в буфер обмена.");
-      }).catch(function () {
-        tokenArea.select();
-        document.execCommand("copy");
-        log("Ключ скопирован.");
-      });
-    } else {
-      tokenArea.select();
-      document.execCommand("copy");
-      log("Ключ скопирован.");
+  $("userTokenBtn").addEventListener("click", function () {
+    if (!requireBridge()) return;
+    const ids = readIds();
+    if (!ids.appId) {
+      log("Укажите app_id — без него VK не выдаст токен.", "error");
+      return;
     }
+    log("Запрашиваю пользовательский токен (права " + USER_SCOPE + ")...");
+    let answered = false;
+    const timer = setTimeout(function () {
+      if (answered) return;
+      log(
+        "VK не ответил за 15 секунд. Попробуйте «Запасной способ (окно VK)».",
+        "error"
+      );
+    }, 15000);
+    bridge.send("VKWebAppGetAuthToken", {
+      app_id: ids.appId,
+      scope: USER_SCOPE
+    })
+      .then(function (data) {
+        answered = true;
+        clearTimeout(timer);
+        showUserToken(data, "VK Bridge");
+      })
+      .catch(function (error) {
+        answered = true;
+        clearTimeout(timer);
+        log(
+          "Не удалось получить токен: " + errText(error) +
+          " — попробуйте запасной способ.", "error"
+        );
+      });
+  });
+
+  $("userTokenOauthBtn").addEventListener("click", function () {
+    const ids = readIds();
+    if (!ids.appId) {
+      log("Укажите app_id.", "error");
+      return;
+    }
+    const back = window.location.origin + window.location.pathname;
+    const url = "https://oauth.vk.com/authorize?client_id=" + ids.appId +
+      "&display=page&redirect_uri=" + encodeURIComponent(back) +
+      "&response_type=token&revoke=1&scope=" +
+      encodeURIComponent(USER_SCOPE + ",offline") + "&v=5.199";
+    log(
+      "Открываю окно VK. Подтвердите доступ — токен вернётся в адрес этой " +
+      "страницы, и поле заполнится само. Если VK ругается на адрес — " +
+      "используйте кнопку «Получить токен»."
+    );
+    window.open(url, "_blank", "noopener");
+  });
+
+  $("userCopyBtn").addEventListener("click", function () {
+    copyFrom(userTokenArea, "Токен скопирован в буфер обмена.");
+  });
+
+  $("userHideBtn").addEventListener("click", function () {
+    userTokenArea.value = "";
+    userTokenBox.classList.add("hidden");
+    log("Токен скрыт из страницы.");
+  });
+
+  $("copyBtn").addEventListener("click", function () {
+    copyFrom(tokenArea, "Ключ скопирован в буфер обмена.");
   });
 
   $("hideBtn").addEventListener("click", function () {
